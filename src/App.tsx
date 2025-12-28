@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Upload, Download, FileText, Settings, Sparkles, RefreshCcw, FileCode, Type, Image as ImageIcon, FileWarning, Loader2, ChevronDown, Printer, FileInput, BookOpen, Check, Columns, Monitor, ZoomIn, PenTool, Grid, ScanLine, CircleHelp, X, Phone, User, GraduationCap, RotateCcw, KeyRound, ExternalLink, Save } from 'lucide-react';
+import { Upload, Download, FileText, Sparkles, RefreshCcw, FileCode, Type, Loader2, ChevronDown, Printer, FileInput, BookOpen, Check, Columns, Monitor, ZoomIn, PenTool, Grid, ScanLine, CircleHelp, X, Phone, User, GraduationCap, RotateCcw } from 'lucide-react';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import { parseContent, generateWordCompatibleFile } from './utils/converter';
@@ -24,31 +24,9 @@ export default function App() {
   // UI States
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  // API Key State
-  const [apiKey, setApiKey] = useState("");
-  const [tempApiKey, setTempApiKey] = useState("");
   
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load API Key from localStorage on mount
-  useEffect(() => {
-    const storedKey = localStorage.getItem("gemini_api_key");
-    if (storedKey) {
-        setApiKey(storedKey);
-        setTempApiKey(storedKey);
-    }
-  }, []);
-
-  // Save API Key
-  const handleSaveApiKey = () => {
-    localStorage.setItem("gemini_api_key", tempApiKey);
-    setApiKey(tempApiKey);
-    setIsSettingsOpen(false);
-    alert("Đã lưu API Key thành công!");
-  };
 
   // Close export menu when clicking outside
   useEffect(() => {
@@ -141,16 +119,12 @@ export default function App() {
             const arrayBuffer = await file.arrayBuffer();
             
             if (useSmartOCR) {
-                if (!apiKey) {
-                    setIsSettingsOpen(true);
-                    throw new Error("Vui lòng nhập API Key để sử dụng tính năng Smart OCR");
-                }
                 // Advanced AI Path
                 setImportStatus("Preparing Smart OCR...");
                 const images = await convertPdfToImages(arrayBuffer);
                 
                 setImportStatus("Gemini AI is analyzing math formulas...");
-                const transcribedText = await analyzeImagesToLatex(images, apiKey);
+                const transcribedText = await analyzeImagesToLatex(images);
                 
                 setRawText(transcribedText);
                 setIsRichText(false); // AI returns Markdown/Latex
@@ -164,14 +138,10 @@ export default function App() {
             setImportStatus("");
         }
         else if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) {
-            if (!apiKey) {
-                setIsSettingsOpen(true);
-                throw new Error("Vui lòng nhập API Key để sử dụng tính năng AI");
-            }
             setImportStatus("Analyzing image with Gemini AI...");
             const base64 = await readFileAsBase64(file);
             const mimeType = file.type;
-            const transcribedText = await analyzeImagesToLatex([{ mimeType, data: base64 }], apiKey);
+            const transcribedText = await analyzeImagesToLatex([{ mimeType, data: base64 }]);
             setRawText(transcribedText);
             setIsRichText(false); // AI returns Markdown/Latex text
             setImportStatus("");
@@ -211,11 +181,7 @@ export default function App() {
         }
     } catch (error) {
         console.error("Error reading file", error);
-        if ((error as Error).message.includes("API Key")) {
-            // Error already handled/thrown for UI
-        } else {
-            alert(`Lỗi: ${error instanceof Error ? error.message : "Unknown error"}`);
-        }
+        alert(`Lỗi: ${error instanceof Error ? error.message : "Unknown error"}`);
         setImportStatus("Error");
     } finally {
         setIsImporting(false);
@@ -224,7 +190,7 @@ export default function App() {
             fileInputRef.current.value = "";
         }
     }
-  }, [useSmartOCR, apiKey]);
+  }, [useSmartOCR]);
 
   // Handle Reset / Start Over
   const handleReset = useCallback(() => {
@@ -307,30 +273,6 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Settings Button (API Key) */}
-            <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border transition-all ${
-                    apiKey 
-                    ? "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100" 
-                    : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 animate-pulse shadow-sm shadow-red-100"
-                }`}
-                title="Cài đặt API Key"
-            >
-              {apiKey ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span className="hidden sm:inline">API Key Active</span>
-                    <span className="sm:hidden">Key</span>
-                  </>
-              ) : (
-                  <>
-                    <KeyRound size={16} />
-                    <span>Nhập API Key</span>
-                  </>
-              )}
-            </button>
-            
             <button 
                 onClick={() => setIsHelpOpen(true)}
                 className="text-slate-500 hover:text-brand-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
@@ -557,7 +499,7 @@ export default function App() {
       </footer>
       
       {/* Floating Chatbot */}
-      <GeminiChat apiKey={apiKey} />
+      <GeminiChat />
 
       {/* Help Modal */}
       {isHelpOpen && (
@@ -632,68 +574,6 @@ export default function App() {
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-sm text-slate-500">
                     Ứng dụng được phát triển bởi <b>Vũ Tiến Lực</b> © 2025
-                </div>
-            </div>
-        </div>
-      )}
-      
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
-                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-brand-50">
-                    <h3 className="text-lg font-bold text-brand-800 flex items-center gap-2">
-                        <Settings className="text-brand-600" size={20} />
-                        Cài đặt API Key
-                    </h3>
-                    <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-500">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 space-y-4">
-                    <p className="text-sm text-slate-600 leading-relaxed">
-                        Để sử dụng các tính năng AI (Smart OCR và Chatbot), bạn cần nhập Google Gemini API Key của riêng mình. 
-                    </p>
-                    
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Google API Key</label>
-                        <input 
-                            type="password"
-                            value={tempApiKey}
-                            onChange={(e) => setTempApiKey(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                            placeholder="Nhập khóa AI-..."
-                        />
-                    </div>
-                    
-                    <a 
-                        href="https://aistudio.google.com/app/apikey" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 font-medium"
-                    >
-                        <ExternalLink size={14} />
-                        Lấy API Key miễn phí tại đây
-                    </a>
-                    
-                    <div className="bg-yellow-50 text-yellow-800 text-xs p-3 rounded-lg border border-yellow-200">
-                        Lưu ý: API Key của bạn sẽ được lưu trên trình duyệt này (LocalStorage) và không được chia sẻ với bất kỳ ai khác.
-                    </div>
-                </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-                    <button 
-                        onClick={() => setIsSettingsOpen(false)}
-                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-                    >
-                        Hủy
-                    </button>
-                    <button 
-                        onClick={handleSaveApiKey}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors shadow-sm"
-                    >
-                        <Save size={16} />
-                        Lưu cài đặt
-                    </button>
                 </div>
             </div>
         </div>

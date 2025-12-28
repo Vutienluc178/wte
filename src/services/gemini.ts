@@ -1,13 +1,10 @@
 import { GoogleGenAI, Chat } from "@google/genai";
 
-// Helper to create client with dynamic key
-const getClient = (apiKey: string) => {
-    if (!apiKey) throw new Error("Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng này.");
-    return new GoogleGenAI({ apiKey });
-}
+// Initialize Gemini Client
+// Note: process.env.API_KEY is injected by the environment.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const createChatSession = (apiKey: string): Chat => {
-  const ai = getClient(apiKey);
+export const createChatSession = (): Chat => {
   return ai.chats.create({
     model: 'gemini-3-pro-preview',
     config: {
@@ -47,12 +44,9 @@ export const sendMessageToGemini = async (
  * Analyzes images (single or multiple pages) using Gemini Vision to extract text and LaTeX.
  */
 export const analyzeImagesToLatex = async (
-    images: { mimeType: string; data: string }[],
-    apiKey: string
+    images: { mimeType: string; data: string }[]
 ): Promise<string> => {
     try {
-        const ai = getClient(apiKey);
-
         // Limit the number of pages processed in one go to avoid payload limits if necessary
         // Gemini 3 Flash has a large context window.
         

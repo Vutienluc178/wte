@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, X, MessageSquare, Loader2, KeyRound } from 'lucide-react';
+import { Send, Bot, User, X, Loader2 } from 'lucide-react';
 import { ChatMessage, MessageRole } from '../types';
 import { createChatSession, sendMessageToGemini } from '../services/gemini';
 import { Chat } from '@google/genai';
 
-interface GeminiChatProps {
-    apiKey: string;
-}
-
-export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
+export const GeminiChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -23,18 +19,14 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen && apiKey && !chatSessionRef.current) {
+    if (isOpen && !chatSessionRef.current) {
         try {
-            chatSessionRef.current = createChatSession(apiKey);
+            chatSessionRef.current = createChatSession();
         } catch (e) {
             console.error("Failed to init chat", e);
         }
     }
-    // Reset chat if key changes or is removed
-    if (!apiKey) {
-        chatSessionRef.current = null;
-    }
-  }, [isOpen, apiKey]);
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,11 +35,11 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
     
-    if (!apiKey || !chatSessionRef.current) {
-        setMessages(prev => [...prev, {
+    if (!chatSessionRef.current) {
+         setMessages(prev => [...prev, {
             id: Date.now().toString(),
             role: MessageRole.Model,
-            text: "Vui lòng nhập API Key trong phần Cài đặt để sử dụng tính năng này.",
+            text: "Lỗi khởi tạo chat (Kiểm tra API Key).",
             isError: true
         }]);
         return;
@@ -82,7 +74,7 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
         role: MessageRole.Model, 
-        text: "Xin lỗi, đã có lỗi kết nối với Gemini. Vui lòng kiểm tra lại API Key.",
+        text: "Xin lỗi, đã có lỗi kết nối với Gemini.",
         isError: true 
       }]);
     } finally {
@@ -123,17 +115,6 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-            {/* Warning if no key */}
-            {!apiKey && (
-                <div className="p-3 bg-yellow-50 text-yellow-800 text-sm rounded-lg border border-yellow-200 flex gap-2">
-                    <KeyRound size={16} className="shrink-0 mt-0.5" />
-                    <div>
-                        <strong>Thiếu API Key</strong><br/>
-                        Bạn cần nhập API Key trong phần Cài đặt để chat với AI.
-                    </div>
-                </div>
-            )}
-
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -190,12 +171,11 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ apiKey }) => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Hỏi về LaTeX..."
-                disabled={!apiKey}
-                className="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm"
               />
               <button
                 onClick={handleSend}
-                disabled={isLoading || !input.trim() || !apiKey}
+                disabled={isLoading || !input.trim()}
                 className="absolute right-2 top-2 p-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send size={16} />
