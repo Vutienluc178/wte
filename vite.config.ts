@@ -10,7 +10,8 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.API_KEY)
     },
     build: {
-      target: 'esnext', // Required for modern libraries like pdfjs-dist and genai
+      target: 'esnext',
+      outDir: 'dist',
     }
   }
 })
