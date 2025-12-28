@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.1.0",
+    "@google/genai": "*",
     "html-docx-js-typescript": "^0.1.5",
     "katex": "^0.16.9",
     "lucide-react": "^0.344.0",
